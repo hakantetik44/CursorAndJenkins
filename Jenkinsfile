@@ -10,6 +10,9 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '5'))
         timestamps()
         disableConcurrentBuilds()
+    }
+
+    parameters {
         gitParameter(
             branch: '',
             branchFilter: 'origin/(.*)',
@@ -23,9 +26,6 @@ pipeline {
             type: 'PT_BRANCH',
             useRepository: 'https://github.com/hakantetik44/CursorAndJenkins.git'
         )
-    }
-
-    parameters {
         choice(
             name: 'TEST_ENV',
             choices: ['QA', 'STAGING', 'PROD'],
