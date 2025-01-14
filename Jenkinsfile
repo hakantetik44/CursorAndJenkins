@@ -32,6 +32,11 @@ pipeline {
                 choices: ['Smoke', 'Regression'],
                 description: 'Test suite seçin'
             )
+            ,choice(
+                name: 'Branch_Name',
+                choices: ['Main', 'allure','qa'],
+                description: 'Test suite seçin'
+            )
         ])
     ])
 
