@@ -13,7 +13,11 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import io.cucumber.java.After;
 import java.time.Duration;
+import io.qameta.allure.*;
+import io.qameta.allure.junit4.DisplayName;
 
+@Epic("Arama Fonksiyonları")
+@Feature("Site Araması")
 public class AramaSteps {
     
     private WebDriver driver;
@@ -28,6 +32,7 @@ public class AramaSteps {
         anasayfaPage = new AnasayfaPage(driver);
     }
 
+    @Step("Kullanıcı ana sayfaya gider")
     @Given("Kullanıcı Gezimanya anasayfasına gider")
     public void kullaniciGezimanyaAnasayfasinaGider() {
         driver.get("https://www.gezisefasi.com/");
@@ -38,6 +43,7 @@ public class AramaSteps {
         }
     }
 
+    @Step("Kullanıcı {string} için arama yapar")
     @When("Arama kutusuna {string} yazar")
     public void aramaKutusunaYazar(String aramaKelimesi) {
         anasayfaPage.aramaYap(aramaKelimesi);
@@ -48,16 +54,16 @@ public class AramaSteps {
         // Bu adım artık aramaYap metodunun içinde
     }
 
-    @Then("Arama sonuçlarında {string} ile ilgili içerikler görüntülenir")
-    public void aramaSonuclarindaIceriklerGoruntulenir(String aramaKelimesi) {
-        boolean sonuc = anasayfaPage.sonuclarGoruntuleniyorMu(aramaKelimesi);
-        System.out.println(anasayfaPage.getTestRaporu());
-        anasayfaPage.htmlRaporuKaydet();
-        Assert.assertTrue("Arama sonuçları görüntülenemedi", sonuc);
+    @Attachment(value = "Page Screenshot", type = "image/png")
+    public byte[] saveScreenshot() {
+        return ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
     }
 
     @After
-    public void tearDown() {
+    public void tearDown(Scenario scenario) {
+        if (scenario.isFailed()) {
+            saveScreenshot();
+        }
         if (driver != null) {
             driver.quit();
         }

@@ -64,19 +64,22 @@ pipeline {
         stage('📊 Generate Reports') {
             steps {
                 echo '📊 Test raporları oluşturuluyor...'
+                
                 // Allure raporu oluştur
-                allure([
-                    includeProperties: false,
-                    jdk: '',
-                    properties: [],
-                    reportBuildPolicy: 'ALWAYS',
-                    results: [[path: "${ALLURE_RESULTS_DIR}"]]
-                ])
+                script {
+                    allure([
+                        includeProperties: false,
+                        jdk: '',
+                        properties: [],
+                        reportBuildPolicy: 'ALWAYS',
+                        results: [[path: 'target/allure-results']]
+                    ])
+                }
 
                 // Cucumber raporu oluştur
                 cucumber([
-                    fileIncludePattern: '**/cucumber.json',
-                    jsonReportDirectory: "${CUCUMBER_REPORTS_DIR}",
+                    fileIncludePattern: '**/CucumberTestReport.json',
+                    jsonReportDirectory: 'target/cucumber-reports',
                     sortingMethod: 'ALPHABETICAL'
                 ])
             }
