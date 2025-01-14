@@ -24,36 +24,14 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '5'))
         timestamps()
         disableConcurrentBuilds()
+        skipDefaultCheckout()
     }
 
     stages {
-        stage('Branch Detection') {
+        stage('Initialize') {
             steps {
-                script {
-                    // Repository'yi çek
-                    checkout scm
-                    
-                    // Mevcut branch'i tespit et
-                    env.BRANCH_NAME = sh(
-                        script: 'git rev-parse --abbrev-ref HEAD',
-                        returnStdout: true
-                    ).trim()
-
-                    // Tüm branch'leri listele ve kaydet
-                    env.ALL_BRANCHES = sh(
-                        script: '''
-                            git fetch --all
-                            git branch -r | grep -v HEAD | sed 's/origin\\///' | tr '\\n' ' '
-                        ''',
-                        returnStdout: true
-                    ).trim()
-
-                    echo """
-                    🔍 Branch Bilgileri:
-                    🌿 Aktif Branch: ${env.BRANCH_NAME}
-                    📋 Tüm Branch'ler: ${env.ALL_BRANCHES}
-                    """
-                }
+                cleanWs()
+                checkout scm
             }
         }
 
@@ -64,7 +42,9 @@ pipeline {
                         sh """
                             mvn clean test \
                             -Denv=${params.TEST_ENV.toLowerCase()} \
-                            -Dsuite=${params.TEST_SUITE.toLowerCase()}
+                            -Dsuite=${params.TEST_SUITE.toLowerCase()} \
+                            -Dcucumber.plugin="json:target/cucumber-reports/cucumber.json" \
+                            -Dcucumber.plugin="html:target/cucumber-reports/cucumber.html"
                         """
                     } catch (Exception e) {
                         currentBuild.result = 'FAILURE'
@@ -77,34 +57,37 @@ pipeline {
         stage('Generate Reports') {
             steps {
                 script {
-                    // Allure raporu oluştur
-                    sh 'mvn allure:report'
-                    
-                    // Raporları topla
-                    sh """
-                        mkdir -p consolidated-reports
-                        cp -r target/site/allure-maven-plugin consolidated-reports/allure-report || true
-                        cp -r target/surefire-reports consolidated-reports/ || true
-                        cp -r target/cucumber-reports consolidated-reports/ || true
-                        zip -r consolidated-test-results.zip consolidated-reports/
-                    """
+                    // Cucumber raporlarını yayınla
+                    cucumber([
+                        fileIncludePattern: '**/cucumber.json',
+                        jsonReportDirectory: 'target/cucumber-reports',
+                        reportTitle: 'Cucumber Test Raporu',
+                        buildStatus: 'UNSTABLE',
+                        trendsLimit: 10,
+                        classifications: [
+                            [
+                                'key': 'Browser',
+                                'value': 'Chrome'
+                            ],
+                            [
+                                'key': 'Branch',
+                                'value': env.BRANCH_NAME
+                            ],
+                            [
+                                'key': 'Environment',
+                                'value': params.TEST_ENV
+                            ]
+                        ]
+                    ])
 
-                    // Eğer allure branch'indeyse, raporları GitHub'a gönder
-                    if (env.BRANCH_NAME == 'allure') {
-                        sh """
-                            git config user.email 'jenkins@example.com'
-                            git config user.name 'Jenkins'
-                            
-                            # Allure raporları için klasör oluştur
-                            mkdir -p docs/allure-reports/${env.BUILD_NUMBER}
-                            cp -r target/site/allure-maven-plugin/* docs/allure-reports/${env.BUILD_NUMBER}/
-                            
-                            # Değişiklikleri commit'le
-                            git add docs/allure-reports
-                            git commit -m "Add Allure report for build ${env.BUILD_NUMBER}"
-                            git push origin allure
-                        """
-                    }
+                    // Raporları arşivle
+                    sh """
+                        mkdir -p test-reports
+                        cp -r target/cucumber-reports/* test-reports/ || true
+                        cp -r target/surefire-reports test-reports/ || true
+                        cp -r target/allure-results test-reports/ || true
+                        zip -r test-reports.zip test-reports/
+                    """
                 }
             }
         }
@@ -112,46 +95,56 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'consolidated-test-results.zip', fingerprint: true
+            // Test raporlarını arşivle
+            archiveArtifacts artifacts: [
+                'test-reports.zip',
+                'target/cucumber-reports/**/*'
+            ].join(', '), fingerprint: true
             
+            // Allure raporu
             allure([
                 reportBuildPolicy: 'ALWAYS',
                 results: [[path: 'target/allure-results']]
             ])
 
-            junit(
-                testResults: '**/target/surefire-reports/TEST-*.xml',
-                skipPublishingChecks: true,
-                skipMarkingBuildUnstable: true
+            // Cucumber raporu
+            cucumber(
+                buildStatus: 'UNSTABLE',
+                failedFeaturesNumber: 1,
+                failedScenariosNumber: 1,
+                skippedStepsNumber: 1,
+                failedStepsNumber: 1,
+                fileIncludePattern: '**/cucumber.json',
+                jsonReportDirectory: 'target/cucumber-reports',
+                reportTitle: 'Cucumber Test Raporu',
+                classifications: [
+                    ['key': 'Branch', 'value': env.BRANCH_NAME],
+                    ['key': 'Environment', 'value': params.TEST_ENV],
+                    ['key': 'Test Suite', 'value': params.TEST_SUITE]
+                ]
             )
 
             cleanWs()
         }
 
         success {
-            script {
-                echo """
-                ✅ Test Sonuçları:
-                🌿 Branch: ${env.BRANCH_NAME}
-                📋 Mevcut Branch'ler: ${env.ALL_BRANCHES}
-                🎯 Test Suite: ${params.TEST_SUITE}
-                🌍 Environment: ${params.TEST_ENV}
-                ✨ Status: Başarılı
-                """
-            }
+            echo """
+            ✅ Test Sonuçları:
+            🌿 Branch: ${env.BRANCH_NAME}
+            🎯 Test Suite: ${params.TEST_SUITE}
+            🌍 Environment: ${params.TEST_ENV}
+            ✨ Status: Başarılı
+            """
         }
 
         failure {
-            script {
-                echo """
-                ❌ Test Sonuçları:
-                🌿 Branch: ${env.BRANCH_NAME}
-                📋 Mevcut Branch'ler: ${env.ALL_BRANCHES}
-                🎯 Test Suite: ${params.TEST_SUITE}
-                🌍 Environment: ${params.TEST_ENV}
-                ⚠️ Status: Başarısız
-                """
-            }
+            echo """
+            ❌ Test Sonuçları:
+            🌿 Branch: ${env.BRANCH_NAME}
+            🎯 Test Suite: ${params.TEST_SUITE}
+            🌍 Environment: ${params.TEST_ENV}
+            ⚠️ Status: Başarısız
+            """
         }
     }
-}
+} 
