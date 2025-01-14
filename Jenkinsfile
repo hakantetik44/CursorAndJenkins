@@ -43,8 +43,10 @@ pipeline {
                             mvn clean test \
                             -Denv=${params.TEST_ENV.toLowerCase()} \
                             -Dsuite=${params.TEST_SUITE.toLowerCase()} \
-                            -Dcucumber.plugin="json:target/cucumber-reports/cucumber.json" \
-                            -Dcucumber.plugin="html:target/cucumber-reports/cucumber.html"
+                            -Dcucumber.plugin="pretty" \
+                            -Dcucumber.plugin="json:target/cucumber-reports/CucumberTestReport.json" \
+                            -Dcucumber.plugin="html:target/cucumber-reports/cucumber-pretty.html" \
+                            -Dcucumber.plugin="junit:target/cucumber-reports/CucumberTestReport.xml"
                         """
                     } catch (Exception e) {
                         currentBuild.result = 'FAILURE'
@@ -57,7 +59,6 @@ pipeline {
         stage('Generate Reports') {
             steps {
                 script {
-                    // Raporları arşivle
                     sh """
                         mkdir -p test-reports
                         cp -r target/cucumber-reports/* test-reports/ || true
@@ -72,26 +73,23 @@ pipeline {
 
     post {
         always {
-            // Test raporlarını arşivle
             archiveArtifacts artifacts: [
                 'test-reports.zip',
                 'target/cucumber-reports/**/*'
             ].join(', '), fingerprint: true
             
-            // Allure raporu
             allure([
                 reportBuildPolicy: 'ALWAYS',
                 results: [[path: 'target/allure-results']]
             ])
 
-            // Cucumber raporu
             cucumber(
                 buildStatus: 'UNSTABLE',
                 failedFeaturesNumber: 1,
                 failedScenariosNumber: 1,
                 skippedStepsNumber: 1,
                 failedStepsNumber: 1,
-                fileIncludePattern: '**/cucumber.json',
+                fileIncludePattern: '**/CucumberTestReport.json',
                 jsonReportDirectory: 'target/cucumber-reports',
                 reportTitle: 'Cucumber Test Raporu',
                 classifications: [
