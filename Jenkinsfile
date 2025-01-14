@@ -6,30 +6,34 @@ pipeline {
         jdk 'JDK17'
     }
 
-    parameters {
-        gitParameter(
-            name: 'BRANCH_TO_BUILD',
-            type: 'PT_BRANCH',
-            defaultValue: 'main',
-            description: 'Select branch to run tests:',
-            branchFilter: 'origin/(.*)',
-            selectedValue: 'DEFAULT',
-            sortMode: 'DESCENDING_SMART',
-            useRepository: 'https://github.com/hakantetik44/CursorAndJenkins.git'
-        )
-
-        choice(
-            name: 'TEST_ENV',
-            choices: ['QA', 'STAGING', 'PROD'],
-            description: 'Select test environment'
-        )
-        
-        choice(
-            name: 'TEST_SUITE',
-            choices: ['Smoke', 'Regression'],
-            description: 'Select test suite'
-        )
-    }
+    // Add properties block to ensure parameters are loaded before pipeline runs
+    properties([
+        parameters([
+            gitParameter(
+                branch: '',
+                branchFilter: 'origin/(.*)',
+                defaultValue: 'main',
+                description: 'Hangi branch üzerinde test çalıştırılacak?',
+                name: 'BRANCH',
+                quickFilterEnabled: true,
+                selectedValue: 'NONE',
+                sortMode: 'ASCENDING_SMART',
+                tagFilter: '*',
+                type: 'PT_BRANCH',
+                useRepository: 'https://github.com/hakantetik44/CursorAndJenkins.git'
+            ),
+            choice(
+                name: 'TEST_ENV',
+                choices: ['QA', 'STAGING', 'PROD'],
+                description: 'Test ortamını seçin'
+            ),
+            choice(
+                name: 'TEST_SUITE',
+                choices: ['Smoke', 'Regression'],
+                description: 'Test suite seçin'
+            )
+        ])
+    ])
 
     options {
         buildDiscarder(logRotator(numToKeepStr: '5'))
@@ -47,12 +51,16 @@ pipeline {
                     // Checkout selected branch
                     checkout([
                         $class: 'GitSCM',
-                        branches: [[name: "*/${params.BRANCH_TO_BUILD}"]],
+                        branches: [[name: "*/${params.BRANCH}"]],
                         userRemoteConfigs: [[url: 'https://github.com/hakantetik44/CursorAndJenkins.git']]
                     ])
                     
-                    env.BRANCH_NAME = params.BRANCH_TO_BUILD
-                    env.GIT_BRANCH = params.BRANCH_TO_BUILD
+                    env.BRANCH_NAME = params.BRANCH
+                    
+                    echo """
+                    🔍 Branch Bilgileri:
+                    🌿 Seçilen Branch: ${env.BRANCH_NAME}
+                    """
                 }
             }
         }
@@ -133,21 +141,21 @@ pipeline {
 
         success {
             echo """
-            ✅ Test Results:
+            ✅ Test Sonuçları:
             🌿 Branch: ${env.BRANCH_NAME}
             🎯 Test Suite: ${params.TEST_SUITE}
             🌍 Environment: ${params.TEST_ENV}
-            ✨ Status: Success
+            ✨ Status: Başarılı
             """
         }
 
         failure {
             echo """
-            ❌ Test Results:
+            ❌ Test Sonuçları:
             🌿 Branch: ${env.BRANCH_NAME}
             🎯 Test Suite: ${params.TEST_SUITE}
             🌍 Environment: ${params.TEST_ENV}
-            ⚠️ Status: Failed
+            ⚠️ Status: Başarısız
             """
         }
     }
