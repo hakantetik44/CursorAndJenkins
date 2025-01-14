@@ -57,29 +57,6 @@ pipeline {
         stage('Generate Reports') {
             steps {
                 script {
-                    // Cucumber raporlarını yayınla
-                    cucumber([
-                        fileIncludePattern: '**/cucumber.json',
-                        jsonReportDirectory: 'target/cucumber-reports',
-                        reportTitle: 'Cucumber Test Raporu',
-                        buildStatus: 'UNSTABLE',
-                        trendsLimit: 10,
-                        classifications: [
-                            [
-                                'key': 'Browser',
-                                'value': 'Chrome'
-                            ],
-                            [
-                                'key': 'Branch',
-                                'value': env.BRANCH_NAME
-                            ],
-                            [
-                                'key': 'Environment',
-                                'value': params.TEST_ENV
-                            ]
-                        ]
-                    ])
-
                     // Raporları arşivle
                     sh """
                         mkdir -p test-reports
@@ -118,6 +95,7 @@ pipeline {
                 jsonReportDirectory: 'target/cucumber-reports',
                 reportTitle: 'Cucumber Test Raporu',
                 classifications: [
+                    ['key': 'Browser', 'value': 'Chrome'],
                     ['key': 'Branch', 'value': env.BRANCH_NAME],
                     ['key': 'Environment', 'value': params.TEST_ENV],
                     ['key': 'Test Suite', 'value': params.TEST_SUITE]
