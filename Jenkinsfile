@@ -7,6 +7,17 @@ pipeline {
     }
 
     parameters {
+        gitParameter(
+            name: 'BRANCH_TO_BUILD',
+            type: 'PT_BRANCH',
+            defaultValue: 'main',
+            description: 'Hangi branch üzerinde çalışılacak?',
+            branchFilter: 'origin/(.*)',
+            selectedValue: 'DEFAULT',
+            sortMode: 'DESCENDING_SMART',
+            useRepository: 'https://github.com/hakantetik44/CursorAndJenkins.git'
+        )
+
         choice(
             name: 'TEST_ENV',
             choices: ['QA', 'STAGING', 'PROD'],
@@ -30,16 +41,13 @@ pipeline {
         stage('Branch Detection') {
             steps {
                 script {
-                    // Repository'yi çek
-                    checkout scm
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: "*/${params.BRANCH_TO_BUILD}"]],
+                        userRemoteConfigs: [[url: 'https://github.com/hakantetik44/CursorAndJenkins.git']]
+                    ])
                     
-                    // Mevcut branch'i tespit et
-                    env.BRANCH_NAME = sh(
-                        script: 'git rev-parse --abbrev-ref HEAD',
-                        returnStdout: true
-                    ).trim()
-
-                    // Tüm branch'leri listele ve kaydet
+                    env.BRANCH_NAME = params.BRANCH_TO_BUILD
                     env.ALL_BRANCHES = sh(
                         script: '''
                             git fetch --all
@@ -50,8 +58,8 @@ pipeline {
 
                     echo """
                     🔍 Branch Bilgileri:
-                    🌿 Aktif Branch: ${env.BRANCH_NAME}
-                    📋 Tüm Branch'ler: ${env.ALL_BRANCHES}
+                    🌿 Seçilen Branch: ${env.BRANCH_NAME}
+                    📋 Mevcut Branch'ler: ${env.ALL_BRANCHES}
                     """
                 }
             }
