@@ -6,44 +6,36 @@ pipeline {
         jdk 'JDK17'
     }
 
-    // Add properties block to ensure parameters are loaded before pipeline runs
-    properties([
-        parameters([
-            gitParameter(
-                branch: '',
-                branchFilter: 'origin/(.*)',
-                defaultValue: 'main',
-                description: 'Hangi branch üzerinde test çalıştırılacak?',
-                name: 'BRANCH',
-                quickFilterEnabled: true,
-                selectedValue: 'NONE',
-                sortMode: 'ASCENDING_SMART',
-                tagFilter: '*',
-                type: 'PT_BRANCH',
-                useRepository: 'https://github.com/hakantetik44/CursorAndJenkins.git'
-            ),
-            choice(
-                name: 'TEST_ENV',
-                choices: ['QA', 'STAGING', 'PROD'],
-                description: 'Test ortamını seçin'
-            ),
-            choice(
-                name: 'TEST_SUITE',
-                choices: ['Smoke', 'Regression'],
-                description: 'Test suite seçin'
-            )
-            ,choice(
-                name: 'Branch_Name',
-                choices: ['Main', 'allure','qa'],
-                description: 'Test suite seçin'
-            )
-        ])
-    ])
-
     options {
         buildDiscarder(logRotator(numToKeepStr: '5'))
         timestamps()
         disableConcurrentBuilds()
+        gitParameter(
+            branch: '',
+            branchFilter: 'origin/(.*)',
+            defaultValue: 'main',
+            description: 'Hangi branch üzerinde test çalıştırılacak?',
+            name: 'BRANCH',
+            quickFilterEnabled: true,
+            selectedValue: 'NONE',
+            sortMode: 'ASCENDING_SMART',
+            tagFilter: '*',
+            type: 'PT_BRANCH',
+            useRepository: 'https://github.com/hakantetik44/CursorAndJenkins.git'
+        )
+    }
+
+    parameters {
+        choice(
+            name: 'TEST_ENV',
+            choices: ['QA', 'STAGING', 'PROD'],
+            description: 'Test ortamını seçin'
+        )
+        choice(
+            name: 'TEST_SUITE',
+            choices: ['Smoke', 'Regression'],
+            description: 'Test suite seçin'
+        )
     }
 
     stages {
