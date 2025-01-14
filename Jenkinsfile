@@ -30,23 +30,29 @@ pipeline {
         stage('Branch Detection') {
             steps {
                 script {
-                    // Mevcut branch'i otomatik tespit et
-                    env.BRANCH_NAME = env.BRANCH_NAME ?: sh(
+                    // Repository'yi çek
+                    checkout scm
+                    
+                    // Mevcut branch'i tespit et
+                    env.BRANCH_NAME = sh(
+                        script: 'git rev-parse --abbrev-ref HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    // Tüm branch'leri listele ve kaydet
+                    env.ALL_BRANCHES = sh(
                         script: '''
-                            git rev-parse --abbrev-ref HEAD || \
-                            git name-rev --name-only HEAD || \
-                            echo "unknown"
+                            git fetch --all
+                            git branch -r | grep -v HEAD | sed 's/origin\\///' | tr '\\n' ' '
                         ''',
                         returnStdout: true
                     ).trim()
 
-                    // Tüm branch'leri listele
-                    sh '''
-                        echo "Mevcut branch'ler:"
-                        git branch -r | grep -v HEAD || true
-                    '''
-
-                    echo "🔄 Çalışılan branch: ${env.BRANCH_NAME}"
+                    echo """
+                    🔍 Branch Bilgileri:
+                    🌿 Aktif Branch: ${env.BRANCH_NAME}
+                    📋 Tüm Branch'ler: ${env.ALL_BRANCHES}
+                    """
                 }
             }
         }
@@ -68,17 +74,37 @@ pipeline {
             }
         }
 
-        stage('Package Reports') {
+        stage('Generate Reports') {
             steps {
                 script {
+                    // Allure raporu oluştur
+                    sh 'mvn allure:report'
+                    
+                    // Raporları topla
                     sh """
                         mkdir -p consolidated-reports
+                        cp -r target/site/allure-maven-plugin consolidated-reports/allure-report || true
                         cp -r target/surefire-reports consolidated-reports/ || true
                         cp -r target/cucumber-reports consolidated-reports/ || true
-                        cp -r target/allure-results consolidated-reports/ || true
-                        cp -r test-raporlari consolidated-reports/ || true
                         zip -r consolidated-test-results.zip consolidated-reports/
                     """
+
+                    // Eğer allure branch'indeyse, raporları GitHub'a gönder
+                    if (env.BRANCH_NAME == 'allure') {
+                        sh """
+                            git config user.email 'jenkins@example.com'
+                            git config user.name 'Jenkins'
+                            
+                            # Allure raporları için klasör oluştur
+                            mkdir -p docs/allure-reports/${env.BUILD_NUMBER}
+                            cp -r target/site/allure-maven-plugin/* docs/allure-reports/${env.BUILD_NUMBER}/
+                            
+                            # Değişiklikleri commit'le
+                            git add docs/allure-reports
+                            git commit -m "Add Allure report for build ${env.BUILD_NUMBER}"
+                            git push origin allure
+                        """
+                    }
                 }
             }
         }
@@ -103,23 +129,29 @@ pipeline {
         }
 
         success {
-            echo """
-            ✅ Test Sonuçları:
-            🌿 Branch: ${env.BRANCH_NAME}
-            🎯 Test Suite: ${params.TEST_SUITE}
-            🌍 Environment: ${params.TEST_ENV}
-            ✨ Status: Başarılı
-            """
+            script {
+                echo """
+                ✅ Test Sonuçları:
+                🌿 Branch: ${env.BRANCH_NAME}
+                📋 Mevcut Branch'ler: ${env.ALL_BRANCHES}
+                🎯 Test Suite: ${params.TEST_SUITE}
+                🌍 Environment: ${params.TEST_ENV}
+                ✨ Status: Başarılı
+                """
+            }
         }
 
         failure {
-            echo """
-            ❌ Test Sonuçları:
-            🌿 Branch: ${env.BRANCH_NAME}
-            🎯 Test Suite: ${params.TEST_SUITE}
-            🌍 Environment: ${params.TEST_ENV}
-            ⚠️ Status: Başarısız
-            """
+            script {
+                echo """
+                ❌ Test Sonuçları:
+                🌿 Branch: ${env.BRANCH_NAME}
+                📋 Mevcut Branch'ler: ${env.ALL_BRANCHES}
+                🎯 Test Suite: ${params.TEST_SUITE}
+                🌍 Environment: ${params.TEST_ENV}
+                ⚠️ Status: Başarısız
+                """
+            }
         }
     }
 }
