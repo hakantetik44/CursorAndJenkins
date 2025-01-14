@@ -4,14 +4,17 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.And;
+import io.cucumber.java.After;
+import io.cucumber.java.Scenario;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.TakesScreenshot;
+import org.openqa.selenium.OutputType;
 import org.junit.Assert;
 import pages.AnasayfaPage;
 import org.openqa.selenium.chrome.ChromeDriver;
 import io.github.bonigarcia.wdm.WebDriverManager;
-import io.cucumber.java.After;
 import java.time.Duration;
 import io.qameta.allure.*;
 import io.qameta.allure.junit4.DisplayName;
@@ -37,7 +40,7 @@ public class AramaSteps {
     public void kullaniciGezimanyaAnasayfasinaGider() {
         driver.get("https://www.gezisefasi.com/");
         try {
-            Thread.sleep(2000); // Sayfa tam yüklensin diye kısa bir bekleme
+            Thread.sleep(2000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -47,11 +50,6 @@ public class AramaSteps {
     @When("Arama kutusuna {string} yazar")
     public void aramaKutusunaYazar(String aramaKelimesi) {
         anasayfaPage.aramaYap(aramaKelimesi);
-    }
-
-    @And("Ara butonuna tıklar")
-    public void araButonunaTiklar() {
-        // Bu adım artık aramaYap metodunun içinde
     }
 
     @Attachment(value = "Page Screenshot", type = "image/png")
