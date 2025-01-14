@@ -8,6 +8,12 @@ pipeline {
 
     parameters {
         choice(
+            name: 'BRANCH',
+            choices: ['main', 'development', 'qa', 'staging', 'feature/search-tests'],
+            description: 'Hangi branch üzerinde test çalıştırılacak?'
+        )
+        
+        choice(
             name: 'TEST_ENV',
             choices: ['QA', 'STAGING', 'PROD'],
             description: 'Test ortamını seçin'
@@ -31,7 +37,16 @@ pipeline {
         stage('Initialize') {
             steps {
                 cleanWs()
-                checkout scm
+                script {
+                    echo "🔄 ${params.BRANCH} branch'ine geçiliyor..."
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: "*/${params.BRANCH}"]],
+                        userRemoteConfigs: [[
+                            url: 'https://github.com/hakantetik44/CursorAndJenkins.git'
+                        ]]
+                    ])
+                }
             }
         }
 
@@ -42,7 +57,8 @@ pipeline {
                         sh """
                             mvn clean test \
                             -Denv=${params.TEST_ENV.toLowerCase()} \
-                            -Dsuite=${params.TEST_SUITE.toLowerCase()}
+                            -Dsuite=${params.TEST_SUITE.toLowerCase()} \
+                            -Dbranch=${params.BRANCH}
                         """
                     } catch (Exception e) {
                         currentBuild.result = 'FAILURE'
@@ -64,11 +80,23 @@ pipeline {
         }
 
         success {
-            echo "✅ ${params.TEST_SUITE} testleri başarıyla tamamlandı"
+            echo """
+            ✅ Test Sonuçları:
+            🌿 Branch: ${params.BRANCH}
+            🎯 Test Suite: ${params.TEST_SUITE}
+            🌍 Environment: ${params.TEST_ENV}
+            ✨ Status: Başarılı
+            """
         }
 
         failure {
-            echo "❌ ${params.TEST_SUITE} testlerinde hata oluştu"
+            echo """
+            ❌ Test Sonuçları:
+            🌿 Branch: ${params.BRANCH}
+            🎯 Test Suite: ${params.TEST_SUITE}
+            🌍 Environment: ${params.TEST_ENV}
+            ⚠️ Status: Başarısız
+            """
         }
     }
 } 
