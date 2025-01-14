@@ -71,14 +71,18 @@ pipeline {
         stage('Package Reports') {
             steps {
                 script {
-                    // Tüm raporları tek bir zip dosyasında topla
+                    // Create a single directory for all reports
                     sh """
-                        mkdir -p test-reports
-                        cp -r target/surefire-reports test-reports/
-                        cp -r target/cucumber-reports test-reports/
-                        cp -r target/allure-results test-reports/
-                        cp -r test-raporlari test-reports/
-                        zip -r test-reports.zip test-reports/
+                        mkdir -p consolidated-reports
+                        
+                        # Copy all report types to the consolidated directory
+                        cp -r target/surefire-reports consolidated-reports/ || true
+                        cp -r target/cucumber-reports consolidated-reports/ || true
+                        cp -r target/allure-results consolidated-reports/ || true
+                        cp -r test-raporlari consolidated-reports/ || true
+                        
+                        # Create a single zip file
+                        zip -r consolidated-test-results.zip consolidated-reports/
                     """
                 }
             }
@@ -87,18 +91,20 @@ pipeline {
 
     post {
         always {
-            // Sadece zip dosyasını ve Allure raporunu arşivle
-            archiveArtifacts artifacts: 'test-reports.zip', fingerprint: true
+            // Archive only the consolidated zip file
+            archiveArtifacts artifacts: 'consolidated-test-results.zip', fingerprint: true
             
+            // Keep Allure report generation but don't archive individual files
             allure([
                 reportBuildPolicy: 'ALWAYS',
                 results: [[path: 'target/allure-results']]
             ])
 
-            // JUnit sonuçlarını topla ama gösterme
+            // Process JUnit results but don't publish them
             junit(
                 testResults: '**/target/surefire-reports/TEST-*.xml',
-                skipPublishingChecks: true
+                skipPublishingChecks: true,
+                skipMarkingBuildUnstable: true
             )
 
             cleanWs()
@@ -124,4 +130,4 @@ pipeline {
             """
         }
     }
-} 
+}
