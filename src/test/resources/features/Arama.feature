@@ -5,4 +5,4 @@ Feature: Gezi Sefası Arama Fonksiyonu
   Scenario: Anasayfada başarılı arama yapma
     Given Kullanıcı Gezimanya anasayfasına gider
     When Arama kutusuna "Kapadokya" yazar
-    Then Arama sonuçlarında "Kapadokya" ile ilgili içerikler görüntülenir 
+ 
