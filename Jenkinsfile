@@ -78,7 +78,9 @@ pipeline {
                             mvn clean test \
                             -Denv=${params.TEST_ENV.toLowerCase()} \
                             -Dsuite=${params.TEST_SUITE.toLowerCase()} \
-                            -Dcucumber.options="--plugin json:target/cucumber-reports/cucumber.json"
+                            -Dcucumber.plugin="json:target/cucumber-reports/cucumber.json" \
+                            -Dcucumber.plugin="html:target/cucumber-reports/cucumber.html" \
+                            -Dcucumber.plugin="junit:target/cucumber-reports/cucumber.xml"
                         """
                     } catch (Exception e) {
                         currentBuild.result = 'FAILURE'
@@ -91,18 +93,37 @@ pipeline {
         stage('Generate Reports') {
             steps {
                 script {
-                    // Create consolidated reports directory
+                    // Cucumber raporlarını arşivle
                     sh """
                         mkdir -p test-reports
-                        
-                        # Copy all reports
+                        cp -r target/cucumber-reports/* test-reports/ || true
                         cp -r target/surefire-reports test-reports/ || true
-                        cp -r target/cucumber-reports test-reports/ || true
                         cp -r target/allure-results test-reports/ || true
-                        
-                        # Create single zip file
                         zip -r test-reports.zip test-reports/
                     """
+
+                    // Cucumber raporlarını yayınla
+                    cucumber([
+                        fileIncludePattern: '**/cucumber.json',
+                        jsonReportDirectory: 'target/cucumber-reports',
+                        reportTitle: 'Cucumber Test Raporu',
+                        buildStatus: 'UNSTABLE',
+                        trendsLimit: 10,
+                        classifications: [
+                            [
+                                'key': 'Browser',
+                                'value': 'Chrome'
+                            ],
+                            [
+                                'key': 'Branch',
+                                'value': env.BRANCH_NAME
+                            ],
+                            [
+                                'key': 'Environment',
+                                'value': params.TEST_ENV
+                            ]
+                        ]
+                    ])
                 }
             }
         }
@@ -110,37 +131,39 @@ pipeline {
 
     post {
         always {
-            // Archive test reports zip
+            // Test raporlarını arşivle
             archiveArtifacts artifacts: 'test-reports.zip', fingerprint: true
             
-            // Generate and publish Allure report
+            // Allure raporu
             allure([
                 reportBuildPolicy: 'ALWAYS',
                 results: [[path: 'target/allure-results']]
             ])
 
-            // Publish Cucumber reports
-            cucumber buildStatus: 'UNSTABLE',
-                     failedFeaturesNumber: 1,
-                     failedScenariosNumber: 1,
-                     skippedStepsNumber: 1,
-                     failedStepsNumber: 1,
-                     classifications: [
-                         [key: 'Branch', value: env.BRANCH_NAME],
-                         [key: 'Environment', value: params.TEST_ENV],
-                         [key: 'Test Suite', value: params.TEST_SUITE]
-                     ],
-                     fileIncludePattern: '**/cucumber.json',
-                     jsonReportDirectory: 'target/cucumber-reports'
+            // Cucumber raporu
+            cucumber(
+                buildStatus: 'UNSTABLE',
+                failedFeaturesNumber: 1,
+                failedScenariosNumber: 1,
+                skippedStepsNumber: 1,
+                failedStepsNumber: 1,
+                fileIncludePattern: '**/cucumber.json',
+                jsonReportDirectory: 'target/cucumber-reports',
+                reportTitle: 'Cucumber Test Raporu',
+                classifications: [
+                    ['key': 'Branch', 'value': env.BRANCH_NAME],
+                    ['key': 'Environment', 'value': params.TEST_ENV],
+                    ['key': 'Test Suite', 'value': params.TEST_SUITE]
+                ]
+            )
 
-            // Process JUnit results
+            // JUnit sonuçları
             junit(
                 testResults: '**/target/surefire-reports/TEST-*.xml',
                 skipPublishingChecks: true,
                 skipMarkingBuildUnstable: true
             )
 
-            // Clean workspace
             cleanWs()
         }
 
