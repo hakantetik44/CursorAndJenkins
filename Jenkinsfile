@@ -67,14 +67,39 @@ pipeline {
                 }
             }
         }
+
+        stage('Package Reports') {
+            steps {
+                script {
+                    // Tüm raporları tek bir zip dosyasında topla
+                    sh """
+                        mkdir -p test-reports
+                        cp -r target/surefire-reports test-reports/
+                        cp -r target/cucumber-reports test-reports/
+                        cp -r target/allure-results test-reports/
+                        cp -r test-raporlari test-reports/
+                        zip -r test-reports.zip test-reports/
+                    """
+                }
+            }
+        }
     }
 
     post {
         always {
+            // Sadece zip dosyasını ve Allure raporunu arşivle
+            archiveArtifacts artifacts: 'test-reports.zip', fingerprint: true
+            
             allure([
                 reportBuildPolicy: 'ALWAYS',
                 results: [[path: 'target/allure-results']]
             ])
+
+            // JUnit sonuçlarını topla ama gösterme
+            junit(
+                testResults: '**/target/surefire-reports/TEST-*.xml',
+                skipPublishingChecks: true
+            )
 
             cleanWs()
         }
