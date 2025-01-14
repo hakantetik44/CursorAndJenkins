@@ -31,7 +31,21 @@ pipeline {
         stage('Initialize') {
             steps {
                 cleanWs()
-                checkout scm
+                script {
+                    // Önce repository'yi çek
+                    checkout scm
+                    
+                    // Mevcut branch'i al
+                    def currentBranch = sh(
+                        script: 'git rev-parse --abbrev-ref HEAD',
+                        returnStdout: true
+                    ).trim()
+                    
+                    // Environment variable olarak kaydet
+                    env.BRANCH_NAME = currentBranch
+                    
+                    echo "🔄 Tespit edilen branch: ${env.BRANCH_NAME}"
+                }
             }
         }
 
@@ -43,10 +57,7 @@ pipeline {
                             mvn clean test \
                             -Denv=${params.TEST_ENV.toLowerCase()} \
                             -Dsuite=${params.TEST_SUITE.toLowerCase()} \
-                            -Dcucumber.plugin="pretty" \
-                            -Dcucumber.plugin="json:target/cucumber-reports/CucumberTestReport.json" \
-                            -Dcucumber.plugin="html:target/cucumber-reports/cucumber-pretty.html" \
-                            -Dcucumber.plugin="junit:target/cucumber-reports/CucumberTestReport.xml"
+                            -Dbranch=${env.BRANCH_NAME}
                         """
                     } catch (Exception e) {
                         currentBuild.result = 'FAILURE'
@@ -56,15 +67,20 @@ pipeline {
             }
         }
 
-        stage('Generate Reports') {
+        stage('Package Reports') {
             steps {
                 script {
                     sh """
-                        mkdir -p test-reports
-                        cp -r target/cucumber-reports/* test-reports/ || true
-                        cp -r target/surefire-reports test-reports/ || true
-                        cp -r target/allure-results test-reports/ || true
-                        zip -r test-reports.zip test-reports/
+                        mkdir -p consolidated-reports
+                        
+                        # Copy all report types to the consolidated directory
+                        cp -r target/surefire-reports consolidated-reports/ || true
+                        cp -r target/cucumber-reports consolidated-reports/ || true
+                        cp -r target/allure-results consolidated-reports/ || true
+                        cp -r test-raporlari consolidated-reports/ || true
+                        
+                        # Create a single zip file
+                        zip -r consolidated-test-results.zip consolidated-reports/
                     """
                 }
             }
@@ -73,31 +89,17 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: [
-                'test-reports.zip',
-                'target/cucumber-reports/**/*'
-            ].join(', '), fingerprint: true
+            archiveArtifacts artifacts: 'consolidated-test-results.zip', fingerprint: true
             
             allure([
                 reportBuildPolicy: 'ALWAYS',
                 results: [[path: 'target/allure-results']]
             ])
 
-            cucumber(
-                buildStatus: 'UNSTABLE',
-                failedFeaturesNumber: 1,
-                failedScenariosNumber: 1,
-                skippedStepsNumber: 1,
-                failedStepsNumber: 1,
-                fileIncludePattern: '**/CucumberTestReport.json',
-                jsonReportDirectory: 'target/cucumber-reports',
-                reportTitle: 'Cucumber Test Raporu',
-                classifications: [
-                    ['key': 'Browser', 'value': 'Chrome'],
-                    ['key': 'Branch', 'value': env.BRANCH_NAME],
-                    ['key': 'Environment', 'value': params.TEST_ENV],
-                    ['key': 'Test Suite', 'value': params.TEST_SUITE]
-                ]
+            junit(
+                testResults: '**/target/surefire-reports/TEST-*.xml',
+                skipPublishingChecks: true,
+                skipMarkingBuildUnstable: true
             )
 
             cleanWs()
