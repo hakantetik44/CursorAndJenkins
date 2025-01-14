@@ -8,161 +8,121 @@ pipeline {
 
     parameters {
         choice(
-            name: 'BRANCH_NAME',
-            choices: ['main', 'development', 'feature/*', 'bugfix/*', 'release/*'],
-            description: 'Hangi branch üzerinde test çalıştırılacak?'
+            name: 'TEST_ENV',
+            choices: ['QA', 'STAGING', 'PROD'],
+            description: 'Test ortamını seçin'
         )
         
         choice(
             name: 'TEST_SUITE',
-            choices: ['smoke', 'regression', 'all'],
-            description: 'Hangi test suite çalıştırılacak?'
+            choices: ['Smoke', 'Regression'],
+            description: 'Test suite seçin'
         )
-
-        booleanParam(
-            name: 'SKIP_TESTS',
-            defaultValue: false,
-            description: 'Testler atlanacak mı?'
-        )
-
-        string(
-            name: 'CUCUMBER_TAGS',
-            defaultValue: '@smoke',
-            description: 'Çalıştırılacak Cucumber tag\'leri (örn: @smoke or @regression)'
-        )
-    }
-
-    environment {
-        ALLURE_RESULTS_DIR = 'target/allure-results'
-        CUCUMBER_REPORTS_DIR = 'target/cucumber-reports'
     }
 
     options {
-        buildDiscarder(logRotator(numToKeepStr: '10'))
-        timeout(time: 1, unit: 'HOURS')
-        ansiColor('xterm')
+        buildDiscarder(logRotator(numToKeepStr: '5'))
         timestamps()
+        disableConcurrentBuilds()
+        skipDefaultCheckout()
     }
 
     stages {
-        stage('🔄 Branch Checkout') {
+        stage('Initialize') {
             steps {
-                echo "🔄 ${params.BRANCH_NAME} branch'i checkout ediliyor..."
-                git branch: "${params.BRANCH_NAME}", 
-                    url: 'https://github.com/hakantetik44/CursorAndJenkins.git'
+                cleanWs()
+                script {
+                    // Önce repository'yi çek
+                    checkout scm
+                    
+                    // Mevcut branch'i al
+                    def currentBranch = sh(
+                        script: 'git rev-parse --abbrev-ref HEAD',
+                        returnStdout: true
+                    ).trim()
+                    
+                    // Environment variable olarak kaydet
+                    env.BRANCH_NAME = currentBranch
+                    
+                    echo "🔄 Tespit edilen branch: ${env.BRANCH_NAME}"
+                }
             }
         }
 
-        stage('🔍 Validate') {
+        stage('Run Tests') {
             steps {
-                echo '🔎 Proje yapısı kontrol ediliyor...'
-                sh 'mvn validate'
-            }
-        }
-
-        stage('🧹 Clean') {
-            steps {
-                echo '🧹 Eski build dosyaları temizleniyor...'
-                sh 'mvn clean'
-            }
-        }
-
-        stage('🏗️ Compile') {
-            steps {
-                echo '🏗️ Proje derleniyor...'
-                sh 'mvn compile'
-            }
-        }
-
-        stage('🧪 Run Tests') {
-            when {
-                expression { return !params.SKIP_TESTS }
-            }
-            steps {
-                echo "🧪 ${params.TEST_SUITE} testleri çalıştırılıyor..."
                 script {
                     try {
                         sh """
-                            mvn test \
-                            -Dcucumber.filter.tags="${params.CUCUMBER_TAGS}" \
-                            -Dcucumber.plugin="pretty,html:${CUCUMBER_REPORTS_DIR}/cucumber-reports.html" \
-                            -Dcucumber.plugin="json:${CUCUMBER_REPORTS_DIR}/CucumberTestReport.json" \
-                            -Dcucumber.plugin="junit:${CUCUMBER_REPORTS_DIR}/cucumber.xml" \
-                            -Dtest.suite=${params.TEST_SUITE}
+                            mvn clean test \
+                            -Denv=${params.TEST_ENV.toLowerCase()} \
+                            -Dsuite=${params.TEST_SUITE.toLowerCase()} \
+                            -Dbranch=${env.BRANCH_NAME}
                         """
                     } catch (Exception e) {
                         currentBuild.result = 'FAILURE'
-                        error "Test execution failed: ${e.message}"
+                        throw e
                     }
                 }
             }
         }
 
-        stage('📊 Generate Reports') {
-            when {
-                expression { return !params.SKIP_TESTS }
-            }
+        stage('Package Reports') {
             steps {
-                echo '📊 Test raporları oluşturuluyor...'
-                
                 script {
-                    allure([
-                        includeProperties: false,
-                        jdk: '',
-                        properties: [],
-                        reportBuildPolicy: 'ALWAYS',
-                        results: [[path: 'target/allure-results']]
-                    ])
+                    sh """
+                        mkdir -p consolidated-reports
+                        
+                        # Copy all report types to the consolidated directory
+                        cp -r target/surefire-reports consolidated-reports/ || true
+                        cp -r target/cucumber-reports consolidated-reports/ || true
+                        cp -r target/allure-results consolidated-reports/ || true
+                        cp -r test-raporlari consolidated-reports/ || true
+                        
+                        # Create a single zip file
+                        zip -r consolidated-test-results.zip consolidated-reports/
+                    """
                 }
-
-                cucumber([
-                    fileIncludePattern: '**/CucumberTestReport.json',
-                    jsonReportDirectory: 'target/cucumber-reports',
-                    sortingMethod: 'ALPHABETICAL'
-                ])
             }
         }
     }
 
     post {
         always {
-            echo '📝 Test sonuçları arşivleniyor...'
+            archiveArtifacts artifacts: 'consolidated-test-results.zip', fingerprint: true
             
-            archiveArtifacts artifacts: """
-                target/surefire-reports/**/*.*,
-                ${CUCUMBER_REPORTS_DIR}/**/*.*,
-                ${ALLURE_RESULTS_DIR}/**/*.*,
-                test-raporlari/*.html
-            """, fingerprint: true, allowEmptyArchive: true
+            allure([
+                reportBuildPolicy: 'ALWAYS',
+                results: [[path: 'target/allure-results']]
+            ])
 
-            junit '**/target/surefire-reports/TEST-*.xml'
-
-            script {
-                def testSummary = """
-                    *Test Sonuçları:*
-                    🌿 Branch: ${params.BRANCH_NAME}
-                    🎯 Test Suite: ${params.TEST_SUITE}
-                    🏷️ Tags: ${params.CUCUMBER_TAGS}
-                    ✅ Başarılı: ${currentBuild.resultIsBetterOrEqualTo('SUCCESS')}
-                    ❌ Başarısız: ${currentBuild.resultIsWorseOrEqualTo('FAILURE')}
-                    🕒 Süre: ${currentBuild.durationString}
-                """
-                echo testSummary
-            }
+            junit(
+                testResults: '**/target/surefire-reports/TEST-*.xml',
+                skipPublishingChecks: true,
+                skipMarkingBuildUnstable: true
+            )
 
             cleanWs()
         }
 
         success {
-            echo '✅ Testler başarıyla tamamlandı!'
+            echo """
+            ✅ Test Sonuçları:
+            🌿 Branch: ${env.BRANCH_NAME}
+            🎯 Test Suite: ${params.TEST_SUITE}
+            🌍 Environment: ${params.TEST_ENV}
+            ✨ Status: Başarılı
+            """
         }
 
         failure {
-            echo '❌ Test sürecinde hatalar oluştu!'
-        }
-
-        unstable {
-            echo '⚠️ Test süreci kararsız durumda!'
+            echo """
+            ❌ Test Sonuçları:
+            🌿 Branch: ${env.BRANCH_NAME}
+            🎯 Test Suite: ${params.TEST_SUITE}
+            🌍 Environment: ${params.TEST_ENV}
+            ⚠️ Status: Başarısız
+            """
         }
     }
 } 
