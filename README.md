@@ -186,3 +186,149 @@ Copyright 2024 - Present
 **Made with ❤️ by Your Team**
 
 </div>
+
+## Test Otomasyon Projesi
+
+Bu proje, web uygulamalarının otomatik testlerini gerçekleştirmek için tasarlanmış bir test otomasyon framework'üdür. Selenium WebDriver, Cucumber BDD ve Jenkins CI/CD entegrasyonunu içermektedir.
+
+## 🛠 Teknolojiler ve Araçlar
+
+- **Java 17**: Ana programlama dili
+- **Maven**: Bağımlılık yönetimi ve build aracı
+- **Selenium WebDriver**: Web otomasyon framework'ü
+- **Cucumber**: Behavior Driven Development (BDD) framework'ü
+- **JUnit**: Test framework'ü
+- **Jenkins**: CI/CD pipeline yönetimi
+- **Allure Reports**: Test raporlama aracı
+- **WebDriverManager**: Browser driver yönetimi
+- **Logback**: Loglama framework'ü
+
+## 📁 Proje Yapısı
+
+```
+.
+├── src/
+│   ├── main/java/         # Ana kaynak kodları
+│   │   ├── pages/         # Page Object Model sınıfları
+│   │   ├── utils/         # Yardımcı sınıflar
+│   │   └── config/        # Konfigürasyon sınıfları
+│   └── test/
+│       ├── java/          # Test sınıfları
+│       │   ├── runners/   # Cucumber test runner'ları
+│       │   └── steps/     # Step definition sınıfları
+│       └── resources/     # Test kaynakları
+│           └── features/  # Cucumber feature dosyaları
+├── test-reports/         # Test raporları dizini
+├── Jenkinsfile          # Jenkins pipeline tanımı
+└── pom.xml             # Maven yapılandırması
+```
+
+## 🔧 Kurulum
+
+1. JDK 17'yi yükleyin
+2. Maven'i yükleyin
+3. Projeyi klonlayın
+4. Bağımlılıkları yüklemek için:
+   ```bash
+   mvn clean install
+   ```
+
+## 🚀 Jenkins Pipeline Detaylı Açıklaması
+
+Jenkins pipeline, aşağıdaki aşamalardan oluşmaktadır:
+
+### 1. Başlangıç Yapılandırması
+```groovy
+tools {
+    maven 'maven'
+    jdk 'JDK17'
+}
+```
+- Maven ve JDK 17 araçları tanımlanır
+- Pipeline'da kullanılacak parametreler belirlenir:
+  - TEST_ENV: QA, STAGING, PRE-PROD ortamları
+  - TEST_SUITE: Smoke veya Regression test suite'leri
+
+### 2. Pipeline Seçenekleri
+```groovy
+options {
+    buildDiscarder(logRotator(numToKeepStr: '5'))
+    timestamps()
+    disableConcurrentBuilds()
+    skipDefaultCheckout()
+}
+```
+- Son 5 build'in logları saklanır
+- Her adıma zaman damgası eklenir
+- Eşzamanlı build'ler engellenir
+- Varsayılan checkout işlemi atlanır
+
+### 3. Test Aşamaları
+
+#### Initialize Stage
+- Workspace temizlenir
+- Kaynak kod checkout edilir
+
+#### Run Tests Stage
+- Maven ile test suite çalıştırılır
+- Seçilen ortam ve test suite parametreleri kullanılır
+- Hata durumunda build başarısız olarak işaretlenir
+
+#### Generate Reports Stage
+- Test raporları oluşturulur ve arşivlenir:
+  - Cucumber raporları
+  - Surefire raporları
+  - Allure raporları
+
+### 4. Post-Build İşlemleri
+
+#### Always Blok
+- Test raporları arşivlenir
+- Allure raporu oluşturulur
+- Cucumber raporu oluşturulur
+- Workspace temizlenir
+
+#### Success/Failure Blokları
+- Test sonuçları detaylı olarak loglanır:
+  - Branch bilgisi
+  - Test suite
+  - Ortam
+  - Durum
+
+## 📊 Test Raporları
+
+Proje üç farklı raporlama mekanizması kullanır:
+
+1. **Cucumber Raporları**: BDD senaryolarının detaylı raporları
+2. **Allure Raporları**: Zengin içerikli, interaktif test raporları
+3. **Surefire Raporları**: Maven test raporları
+
+## 🔍 Test Ortamları
+
+- **QA**: Geliştirme sonrası ilk test ortamı
+- **STAGING**: Prodüksiyon benzeri test ortamı
+- **PRE-PROD**: Prodüksiyon öncesi son test ortamı
+
+## 📝 Test Suite'leri
+
+1. **Smoke Tests**
+   - Kritik fonksiyonların hızlı kontrolü
+   - Her deployment sonrası çalıştırılır
+   - Ortalama süre: 5-10 dakika
+
+2. **Regression Tests**
+   - Tüm fonksiyonların detaylı testi
+   - Major release öncesi çalıştırılır
+   - Ortalama süre: 30-60 dakika
+
+## 🤝 Katkıda Bulunma
+
+1. Fork'layın
+2. Feature branch oluşturun
+3. Değişikliklerinizi commit'leyin
+4. Branch'inizi push'layın
+5. Pull Request oluşturun
+
+## 📫 İletişim
+
+Sorularınız için issue açabilir veya projenin maintainer'ları ile iletişime geçebilirsiniz.

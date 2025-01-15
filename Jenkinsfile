@@ -9,7 +9,7 @@ pipeline {
     parameters {
         choice(
             name: 'TEST_ENV',
-            choices: ['QA', 'STAGING', 'PROD'],
+            choices: ['QA', 'STAGING', 'PRE-PROD'],
             description: 'Test ortamını seçin'
         )
         
