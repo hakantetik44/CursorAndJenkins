@@ -1,7 +1,6 @@
 package utilities;
 
 import org.junit.Assert;
-import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -13,7 +12,6 @@ import java.time.format.DateTimeFormatter;
 import org.openqa.selenium.Keys;
 
 public class ChainTest {
-    private WebDriver driver;
     private WebDriverWait wait;
     private String testAdi;
     private StringBuilder testRaporu;
@@ -21,9 +19,8 @@ public class ChainTest {
     private int basariliAdimSayisi = 0;
     private int basarisizAdimSayisi = 0;
 
-    public ChainTest(WebDriver driver) {
-        this.driver = driver;
-        this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+    public ChainTest() {
+        this.wait = new WebDriverWait(Driver.getDriver(), Duration.ofSeconds(10));
         this.testRaporu = new StringBuilder();
         this.htmlRapor = new StringBuilder();
         htmlRaporBaslat();
