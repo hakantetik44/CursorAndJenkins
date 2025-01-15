@@ -55,30 +55,7 @@ pipeline {
         stage('Generate Reports') {
             steps {
                 script {
-                    // Cucumber raporlarını arşivle
-                    cucumber([
-                        fileIncludePattern: '**/cucumber.json',
-                        jsonReportDirectory: 'target/cucumber-reports',
-                        reportTitle: 'Cucumber Test Raporu',
-                        buildStatus: 'UNSTABLE',
-                        trendsLimit: 10,
-                        classifications: [
-                            [
-                                'key': 'Browser',
-                                'value': 'Chrome'
-                            ],
-                            [
-                                'key': 'Branch',
-                                'value': env.BRANCH_NAME
-                            ],
-                            [
-                                'key': 'Environment',
-                                'value': params.TEST_ENV
-                            ]
-                        ]
-                    ])
-
-                    // Diğer raporları arşivle
+                    // Sadece raporları arşivle
                     sh """
                         mkdir -p test-reports
                         cp -r target/cucumber-reports/* test-reports/ || true
@@ -105,7 +82,7 @@ pipeline {
                 results: [[path: 'target/allure-results']]
             ])
 
-            // Cucumber raporu tekrar yayınla
+            // Cucumber raporu
             cucumber(
                 buildStatus: 'UNSTABLE',
                 fileIncludePattern: '**/cucumber.json',
