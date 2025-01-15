@@ -18,6 +18,7 @@ import io.github.bonigarcia.wdm.WebDriverManager;
 import java.time.Duration;
 import io.qameta.allure.*;
 import io.qameta.allure.junit4.DisplayName;
+import org.openqa.selenium.chrome.ChromeOptions;
 
 @Epic("Arama Fonksiyonları")
 @Feature("Site Araması")
@@ -28,8 +29,16 @@ public class AramaSteps {
 
     public AramaSteps() {
         WebDriverManager.chromedriver().setup();
-        driver = new ChromeDriver();
-        driver.manage().window().maximize();
+        
+        // Chrome options için headless modu ekle
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless=new");  // Chrome 109+ için yeni headless modu
+        options.addArguments("--disable-gpu");    // Windows için gerekli
+        options.addArguments("--no-sandbox");     // Linux için gerekli
+        options.addArguments("--disable-dev-shm-usage"); // Docker/CI için gerekli
+        options.addArguments("--window-size=1920,1080"); // Ekran boyutu
+        
+        driver = new ChromeDriver(options);
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(15));
         driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(30));
         anasayfaPage = new AnasayfaPage(driver);
