@@ -17,7 +17,8 @@ import org.junit.runner.RunWith;
         },
         monochrome = true,
         tags = "@smoke",
-        dryRun = false
+        dryRun = false,
+        publish = true
 )
 public class TestRunner {
 } 
