@@ -7,6 +7,7 @@
 [![Jenkins](https://img.shields.io/badge/Jenkins-D24939?style=for-the-badge&logo=jenkins&logoColor=white)](https://www.jenkins.io/)
 [![Maven](https://img.shields.io/badge/Maven-C71A36?style=for-the-badge&logo=apache-maven&logoColor=white)](https://maven.apache.org/)
 [![JUnit](https://img.shields.io/badge/JUnit5-25A162?style=for-the-badge&logo=junit5&logoColor=white)](https://junit.org/)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/hakantetik44/)
 
 <img src="https://raw.githubusercontent.com/Kodluyoruz/taskforce/main/git/figures/git.png" alt="Project Banner" width="400"/>
 
@@ -14,7 +15,6 @@
 _Powered by Selenium WebDriver & Cucumber BDD_
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Code Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](https://github.com)
 
 </div>
@@ -169,21 +169,10 @@ graph LR
 
 <div align="center">
 
+[![Author](https://img.shields.io/badge/Author-Hakan%20Tetik-blue?style=for-the-badge)](https://www.linkedin.com/in/hakantetik44/)
 [![Email](https://img.shields.io/badge/Email-Support-blue?style=for-the-badge&logo=mail.ru)](mailto:support@company.com)
 [![GitHub Issues](https://img.shields.io/badge/GitHub-Issues-red?style=for-the-badge&logo=github)](https://github.com/issues)
 [![Documentation](https://img.shields.io/badge/Documentation-Wiki-green?style=for-the-badge&logo=bookstack)](https://github.com/wiki)
-
-</div>
-
-## 📜 License
-
-<div align="center">
-
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
-
-Copyright 2024 - Present
-
-**Made with ❤️ by Your Team**
 
 </div>
 
@@ -210,7 +199,7 @@ Bu proje, web uygulamalarının otomatik testlerini gerçekleştirmek için tasa
 ├── src/
 │   ├── main/java/         # Ana kaynak kodları
 │   │   ├── pages/         # Page Object Model sınıfları
-│   │   ├── utils/         # Yardımcı sınıflar
+│   │   ├── utils/         # Yardımcı sınıfları
 │   │   └── config/        # Konfigürasyon sınıfları
 │   └── test/
 │       ├── java/          # Test sınıfları
@@ -329,6 +318,14 @@ Proje üç farklı raporlama mekanizması kullanır:
 4. Branch'inizi push'layın
 5. Pull Request oluşturun
 
-## 📫 İletişim
+## 📜 License
 
-Sorularınız için issue açabilir veya projenin maintainer'ları ile iletişime geçebilirsiniz.
+<div align="center">
+
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
+
+Copyright 2024 - Present
+
+**Built with ❤️ by Hakan Tetik**
+
+</div>
