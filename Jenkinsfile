@@ -9,7 +9,7 @@ pipeline {
     parameters {
         choice(
             name: 'TEST_ENV',
-            choices: ['QA', 'STAGING', 'PROD'],
+            choices: ['QA', 'STAGING', 'PRE-PROD'],
             description: 'Test ortamını seçin'
         )
         
@@ -31,21 +31,7 @@ pipeline {
         stage('Initialize') {
             steps {
                 cleanWs()
-                script {
-                    // Önce repository'yi çek
-                    checkout scm
-                    
-                    // Mevcut branch'i al
-                    def currentBranch = sh(
-                        script: 'git rev-parse --abbrev-ref HEAD',
-                        returnStdout: true
-                    ).trim()
-                    
-                    // Environment variable olarak kaydet
-                    env.BRANCH_NAME = currentBranch
-                    
-                    echo "🔄 Tespit edilen branch: ${env.BRANCH_NAME}"
-                }
+                checkout scm
             }
         }
 
@@ -56,8 +42,7 @@ pipeline {
                         sh """
                             mvn clean test \
                             -Denv=${params.TEST_ENV.toLowerCase()} \
-                            -Dsuite=${params.TEST_SUITE.toLowerCase()} \
-                            -Dbranch=${env.BRANCH_NAME}
+                            -Dsuite=${params.TEST_SUITE.toLowerCase()}
                         """
                     } catch (Exception e) {
                         currentBuild.result = 'FAILURE'
@@ -67,20 +52,16 @@ pipeline {
             }
         }
 
-        stage('Package Reports') {
+        stage('Generate Reports') {
             steps {
                 script {
+                    // Sadece raporları arşivle
                     sh """
-                        mkdir -p consolidated-reports
-                        
-                        # Copy all report types to the consolidated directory
-                        cp -r target/surefire-reports consolidated-reports/ || true
-                        cp -r target/cucumber-reports consolidated-reports/ || true
-                        cp -r target/allure-results consolidated-reports/ || true
-                        cp -r test-raporlari consolidated-reports/ || true
-                        
-                        # Create a single zip file
-                        zip -r consolidated-test-results.zip consolidated-reports/
+                        mkdir -p test-reports
+                        cp -r target/cucumber-reports/* test-reports/ || true
+                        cp -r target/surefire-reports test-reports/ || true
+                        cp -r target/allure-results test-reports/ || true
+                        zip -r test-reports.zip test-reports/
                     """
                 }
             }
@@ -89,17 +70,30 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'consolidated-test-results.zip', fingerprint: true
+            // Test raporlarını arşivle
+            archiveArtifacts artifacts: [
+                'test-reports.zip',
+                'target/cucumber-reports/**/*'
+            ].join(', '), fingerprint: true
             
+            // Allure raporu
             allure([
                 reportBuildPolicy: 'ALWAYS',
                 results: [[path: 'target/allure-results']]
             ])
 
-            junit(
-                testResults: '**/target/surefire-reports/TEST-*.xml',
-                skipPublishingChecks: true,
-                skipMarkingBuildUnstable: true
+            // Cucumber raporu
+            cucumber(
+                buildStatus: 'UNSTABLE',
+                fileIncludePattern: '**/cucumber.json',
+                jsonReportDirectory: 'target/cucumber-reports',
+                reportTitle: 'Cucumber Test Raporu',
+                classifications: [
+                    ['key': 'Browser', 'value': 'Chrome'],
+                    ['key': 'Branch', 'value': env.BRANCH_NAME],
+                    ['key': 'Environment', 'value': params.TEST_ENV],
+                    ['key': 'Test Suite', 'value': params.TEST_SUITE]
+                ]
             )
 
             cleanWs()

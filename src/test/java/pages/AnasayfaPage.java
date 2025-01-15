@@ -5,50 +5,37 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.PageFactory;
 import org.openqa.selenium.Keys;
-import utilities.ChainTest;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import java.time.Duration;
 
 public class AnasayfaPage {
     
-    private WebDriver driver;
-    private ChainTest chainTest;
-
-    public AnasayfaPage(WebDriver driver) {
-        this.driver = driver;
-        this.chainTest = new ChainTest(driver);
-        PageFactory.initElements(driver, this);
-    }
-
+    private WebDriverWait wait;
+    
     @FindBy(id = "tourFind")
     private WebElement searchBox;
 
     @FindBy(css = ".search-results, .tour-list, .easy-autocomplete-container")
     private WebElement searchResults;
 
+    public AnasayfaPage(WebDriver driver) {
+        PageFactory.initElements(driver, this);
+        wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+    }
+
     public void aramaYap(String aramaKelimesi) {
-        chainTest
-            .testBaslat("Arama Testi")
-            .yaziYaz(searchBox, aramaKelimesi)
-            .enterBasma(searchBox);
+        wait.until(ExpectedConditions.visibilityOf(searchBox));
+        searchBox.sendKeys(aramaKelimesi);
+        searchBox.sendKeys(Keys.ENTER);
     }
 
     public boolean sonuclarGoruntuleniyorMu(String aramaKelimesi) {
         try {
-            chainTest
-                .elementGozukeneKadarBekle(searchResults)
-                .dogrula("Arama sonuçları görüntülendi", 
-                    searchResults.getText().contains(aramaKelimesi));
-            return true;
+            wait.until(ExpectedConditions.visibilityOf(searchResults));
+            return searchResults.getText().contains(aramaKelimesi);
         } catch (Exception e) {
-            System.out.println(chainTest.raporuGetir());
             return false;
         }
-    }
-
-    public String getTestRaporu() {
-        return chainTest.raporuGetir();
-    }
-
-    public void htmlRaporuKaydet() {
-        chainTest.htmlRaporuKaydet();
     }
 } 
