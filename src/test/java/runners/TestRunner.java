@@ -16,7 +16,8 @@ import org.junit.runner.RunWith;
                 "io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm"
         },
         monochrome = true,
-        tags = "@smoke"
+        tags = "@smoke",
+        dryRun = false
 )
 public class TestRunner {
 } 

@@ -95,15 +95,21 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.3</version>
                 <configuration>
+                    <includes>
+                        <include>**/*Runner.java</include>
+                    </includes>
+                    <systemPropertyVariables>
+                        <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
+                    </systemPropertyVariables>
                     <argLine>
                         -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"
                     </argLine>
-                    <systemProperties>
+                    <properties>
                         <property>
-                            <name>allure.results.directory</name>
-                            <value>${project.build.directory}/allure-results</value>
+                            <name>listener</name>
+                            <value>io.qameta.allure.junit4.AllureJunit4</value>
                         </property>
-                    </systemProperties>
+                    </properties>
                 </configuration>
                 <dependencies>
                     <dependency>
